@@ -25,12 +25,13 @@ import { StreamStateView_Members_Solicitations } from './streamStateView_Members
 import { bin_toHexString, check, dlog } from '@towns-protocol/dlog'
 import { DecryptedContent } from './encryptedContentTypes'
 import { StreamStateView_MemberMetadata } from './streamStateView_MemberMetadata'
-import { KeySolicitationContent } from '@towns-protocol/encryption'
+import { KeySolicitationContent } from './decryptionExtensions'
 import { makeParsedEvent } from './sign'
 import { StreamStateView_AbstractContent } from './streamStateView_AbstractContent'
 import { utils } from 'ethers'
 import { create } from '@bufbuild/protobuf'
 import { getSpaceReviewEventDataBin, SpaceReviewEventObject } from '@towns-protocol/web3'
+import { StreamMemberIdsView } from './views/streams/streamMemberIds'
 
 const log = dlog('csb:streamStateView_Members')
 
@@ -92,11 +93,19 @@ export class StreamStateView_Members extends StreamStateView_AbstractContent {
 
     tokenTransfers: MemberTokenTransfer[] = []
 
-    constructor(streamId: string) {
+    get streamMemberIds(): string[] {
+        return this.streamMemberIdsView.get(this.streamId)
+    }
+
+    constructor(
+        streamId: string,
+        currentUserId: string,
+        private streamMemberIdsView: StreamMemberIdsView,
+    ) {
         super()
         this.streamId = streamId
         this.solicitHelper = new StreamStateView_Members_Solicitations(streamId)
-        this.memberMetadata = new StreamStateView_MemberMetadata(streamId)
+        this.memberMetadata = new StreamStateView_MemberMetadata(streamId, currentUserId)
     }
 
     // initialization
@@ -109,8 +118,10 @@ export class StreamStateView_Members extends StreamStateView_AbstractContent {
         if (!snapshot.members) {
             return
         }
+        const memberIds: string[] = []
         for (const member of snapshot.members.joined) {
             const userId = userIdFromAddress(member.userAddress)
+            memberIds.push(userId)
             this.joined.set(userId, {
                 userId,
                 userAddress: member.userAddress,
@@ -136,6 +147,7 @@ export class StreamStateView_Members extends StreamStateView_AbstractContent {
             })
             this.applyMembershipEvent(userId, MembershipOp.SO_JOIN, 'confirmed', undefined)
         }
+        this.streamMemberIdsView.setMembers(this.streamId, memberIds)
         // user/display names were ported from an older implementation and could be simpler
         const usernames = Array.from(this.joined.values())
             .filter((x) => isDefined(x.encryptedUsername))
@@ -293,9 +305,11 @@ export class StreamStateView_Members extends StreamStateView_AbstractContent {
                                 eventNum: event.eventNum,
                                 solicitations: [],
                             })
+                            this.streamMemberIdsView.addMember(this.streamId, userId)
                             break
                         case MembershipOp.SO_LEAVE:
                             this.joined.delete(userId)
+                            this.streamMemberIdsView.removeMember(this.streamId, userId)
                             break
                         default:
                             break
@@ -604,6 +618,10 @@ export class StreamStateView_Members extends StreamStateView_AbstractContent {
 
     joinedParticipants(): Set<string> {
         return this.joinedUsers
+    }
+
+    joinedOrPendingJoinedParticipants(): Set<string> {
+        return new Set([...this.joinedUsers, ...this.pendingJoinedUsers])
     }
 
     joinedOrInvitedParticipants(): Set<string> {

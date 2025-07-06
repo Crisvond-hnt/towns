@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: Apache-2.0
+// SPDX-License-Identifier: MIT
 pragma solidity ^0.8.19;
 
 // utils
@@ -187,6 +187,7 @@ contract AppRegistryTest is BaseSetup, IAppRegistryBase, IAttestationRegistryBas
         assertEq(appId, registry.getLatestAppId(app));
         assertEq(module, app);
         assertEq(registry.getAppByClient(DEFAULT_CLIENT), app);
+        assertEq(registry.getAppDuration(app), DEFAULT_ACCESS_DURATION);
     }
 
     function test_revertWhen_createApp_EmptyName() external {
@@ -372,7 +373,7 @@ contract AppRegistryTest is BaseSetup, IAppRegistryBase, IAttestationRegistryBas
     }
 
     function test_installApp_whenBpsLowerThanMinFee() external givenAppIsRegistered {
-        uint256 price = 0.01 ether;
+        uint256 price = 0.005 ether;
         _setupAppWithPrice(price);
 
         uint256 protocolFee = _getProtocolFee(price);

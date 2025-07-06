@@ -15,16 +15,17 @@ import {
     RemoteTimelineEvent,
     StreamTimelineEvent,
 } from './types'
+import { UserDevice } from '@towns-protocol/encryption'
 import {
     EventSignatureBundle,
+    KeyFulfilmentData,
     KeySolicitationContent,
-    UserDevice,
-} from '@towns-protocol/encryption'
+} from './decryptionExtensions'
 import { EncryptedContent } from './encryptedContentTypes'
 import { SyncState } from './syncedStreamsLoop'
 import { Pin } from './streamStateView_Members'
 import { SpaceReviewEventObject } from '@towns-protocol/web3'
-import { TimelineEvent } from './sync-agent/timeline/models/timeline-types'
+import { TimelineEvent } from './views/models/timelineTypes'
 
 export type StreamChange = {
     prepended?: RemoteTimelineEvent[]
@@ -44,6 +45,7 @@ export type StreamEncryptionEvents = {
         fromUserAddress: Uint8Array,
         event: KeySolicitationContent,
         sigBundle: EventSignatureBundle,
+        ephemeral?: boolean,
     ) => void
     updatedKeySolicitation: (
         streamId: string,
@@ -64,12 +66,15 @@ export type StreamEncryptionEvents = {
         sigBundle: EventSignatureBundle,
     ) => void
     userDeviceKeyMessage: (streamId: string, userId: string, userDevice: UserDevice) => void
+    ephemeralKeyFulfillment: (event: KeyFulfilmentData) => void
 }
 
 export type SyncedStreamEvents = {
     streamSyncStateChange: (newState: SyncState) => void
     streamRemovedFromSync: (streamId: string) => void
     streamSyncActive: (active: boolean) => void
+    streamSyncBatchCompleted: (details: { duration: number; count: number }) => void
+    streamSyncTimedOut: (details: { duration: number }) => void
 }
 
 /// Stream state events, emitted after initialization

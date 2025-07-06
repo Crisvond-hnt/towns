@@ -45,7 +45,7 @@ import { bin_toHexString } from '@towns-protocol/dlog'
 import { isDefined } from './check'
 import { DecryptedContent } from './encryptedContentTypes'
 import { addressFromUserId, streamIdAsBytes } from './id'
-import { DecryptionSessionError, EventSignatureBundle } from '@towns-protocol/encryption'
+import { DecryptionSessionError, EventSignatureBundle } from './decryptionExtensions'
 
 export type LocalEventStatus = 'sending' | 'sent' | 'failed'
 export interface LocalEvent {
@@ -60,6 +60,7 @@ export interface ParsedEvent {
     hashStr: string
     signature: Uint8Array | undefined
     creatorUserId: string
+    ephemeral: boolean
 }
 
 export interface ParsedSnapshot {

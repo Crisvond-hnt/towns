@@ -1,5 +1,5 @@
 import { Observable } from '../../observable/observable'
-import { TimelineEvent, RiverTimelineEvent } from '../../sync-agent/timeline/models/timeline-types'
+import { TimelineEvent, RiverTimelineEvent } from '../models/timelineTypes'
 import { LocalTimelineEvent, StreamTimelineEvent } from '../../types'
 import {
     makeTimelinesViewInterface,
@@ -7,10 +7,10 @@ import {
     TimelinesViewModel,
 } from './timelinesModel'
 import { StreamChange } from '../../streamEvents'
-import { toDecryptedContentErrorEvent, toDecryptedEvent, toEvent } from './timelineEvents'
+import { toDecryptedContentErrorEvent, toDecryptedEvent, toEvent } from '../models/timelineEvent'
 import { DecryptedContent } from '../../encryptedContentTypes'
-import { DecryptionSessionError } from '@towns-protocol/encryption'
-import isEqual from 'lodash/isEqual'
+import { DecryptionSessionError } from '../../decryptionExtensions'
+import { isEqual } from 'lodash-es'
 import { isDMChannelStreamId } from '../../id'
 
 export interface TimelinesViewDelegate {
@@ -44,11 +44,6 @@ export class TimelinesView extends Observable<TimelinesViewModel> {
                 this.setValue(fn(this.value))
             },
         )
-    }
-
-    // for backwards compatibility
-    getState() {
-        return this.value
     }
 
     streamInitialized(streamId: string, messages: StreamTimelineEvent[]) {
@@ -95,9 +90,7 @@ export class TimelinesView extends Observable<TimelinesViewModel> {
         eventId: string,
         decryptedContent: DecryptedContent,
     ): TimelineEvent | undefined {
-        const prevEvent = this.getState().timelines[streamId].find(
-            (event) => event.eventId === eventId,
-        )
+        const prevEvent = this.value.timelines[streamId].find((event) => event.eventId === eventId)
         if (prevEvent) {
             const newEvent = toDecryptedEvent(prevEvent, decryptedContent, this.userId)
             if (!isEqual(newEvent, prevEvent)) {
@@ -113,9 +106,7 @@ export class TimelinesView extends Observable<TimelinesViewModel> {
         eventId: string,
         error: DecryptionSessionError,
     ) {
-        const prevEvent = this.getState().timelines[streamId].find(
-            (event) => event.eventId === eventId,
-        )
+        const prevEvent = this.value.timelines[streamId].find((event) => event.eventId === eventId)
         if (prevEvent) {
             const newEvent = toDecryptedContentErrorEvent(prevEvent, error)
             if (newEvent !== prevEvent) {

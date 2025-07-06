@@ -46,6 +46,11 @@ if (!baseRegistry) {
     throw new Error('Base registry address not found')
 }
 
+const riverAirdrop = getContractAddress('riverAirdrop')
+if (!riverAirdrop) {
+    throw new Error('River airdrop address not found')
+}
+
 export default createConfig({
     chains: {
         anvil: {
@@ -100,6 +105,12 @@ export default createConfig({
         SwapRouter: {
             abi: swapRouterAbi,
             address: swapRouter,
+            startBlock,
+            chain: 'omega',
+        },
+        RiverAirdrop: {
+            abi: mergeAbis([rewardsDistributionV2Abi]),
+            address: riverAirdrop,
             startBlock,
             chain: 'omega',
         },
