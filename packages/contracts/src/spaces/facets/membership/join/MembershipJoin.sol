@@ -25,6 +25,7 @@ import {PrepayBase} from "../../prepay/PrepayBase.sol";
 import {ReferralsBase} from "../../referrals/ReferralsBase.sol";
 import {RolesBase} from "../../roles/RolesBase.sol";
 import {MembershipBase} from "../MembershipBase.sol";
+import {ERC721ABase} from "../../../../diamond/facets/token/ERC721A/ERC721ABase.sol";
 
 /// @title MembershipJoin
 /// @notice Handles the logic for joining a space, including entitlement checks and payment
@@ -41,7 +42,8 @@ abstract contract MembershipJoin is
     EntitlementGatedBase,
     Entitled,
     PrepayBase,
-    PointsBase
+    PointsBase,
+    ERC721ABase
 {
     using CustomRevert for bytes4;
 
@@ -383,15 +385,7 @@ abstract contract MembershipJoin is
         _releaseCapturedValue(transactionId, paymentRequired);
         _captureData(transactionId, "");
 
-        // calculate points and credit them
-        address airdropDiamond = _getAirdropDiamond();
-        uint256 points = _getPoints(
-            airdropDiamond,
-            ITownsPointsBase.Action.JoinSpace,
-            abi.encode(membershipPrice)
-        );
-        _mintPoints(airdropDiamond, receiver, points);
-        _mintPoints(airdropDiamond, _owner(), points);
+        _mintMembershipPoints(receiver, membershipPrice);
     }
 
     /// @notice Issues a membership token to the receiver
@@ -521,6 +515,8 @@ abstract contract MembershipJoin is
             Membership__InvalidPayment.selector.revertWith();
         }
 
+        _mintMembershipPoints(receiver, membershipPrice);
+
         uint256 protocolFee = _collectProtocolFee(payer, membershipPrice);
 
         uint256 remainingDue = membershipPrice - protocolFee;
@@ -537,5 +533,21 @@ abstract contract MembershipJoin is
         }
 
         _renewSubscription(tokenId, uint64(duration));
+    }
+
+    /// @notice Mints points to a member based on their paid amount
+    /// @dev This function handles point minting for both new joins and renewals
+    /// @param receiver The address receiving the points
+    /// @param paidAmount The amount paid for membership
+    function _mintMembershipPoints(address receiver, uint256 paidAmount) internal {
+        // calculate points and credit them
+        address airdropDiamond = _getAirdropDiamond();
+        uint256 points = _getPoints(
+            airdropDiamond,
+            ITownsPointsBase.Action.JoinSpace,
+            abi.encode(paidAmount)
+        );
+        _mintPoints(airdropDiamond, receiver, points);
+        _mintPoints(airdropDiamond, _owner(), points);
     }
 }
